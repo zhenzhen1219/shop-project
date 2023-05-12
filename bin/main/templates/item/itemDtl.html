@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultrag.net.nz/thymeleaf/layout"
+	layout:decorate="~{layouts/layout1}">
+
+<head>
+	<meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
+
+
+
+
+	<!-- 여기다가 일단 추가해봄 -->
+	<meta content="width=device-width, initial-scale=1.0" name="viewport">
+	<meta content="Free HTML Templates" name="keywords">
+	<meta content="Free HTML Templates" name="description">
+
+	<!-- Favicon -->
+	<link href="eshopper/img/favicon.ico" rel="icon">
+
+	<!-- Google Web Fonts -->
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap"
+		rel="stylesheet">
+
+	<!-- Font Awesome -->
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+
+
+
+</head>
+
+<!-- 사용자 스크립트 추가 -->
+<th:block layout:fragment="script">
+	<script th:inline="javascript">
+
+
+		var starScore;
+		$(document).ready(function () {
+			
+			$("#order").on("click", function () {
+			if($(":radio[name='size']:checked").length<1){
+				alert("size를 선택해주세요");
+				return false;
+			}else{
+				var form = document.formCheck
+				form.submit
+			}
+			
+			
+			
+			
+			});
+			
+			setTimeout(calculateTotalPrice(), 2000);
+
+			var move = [[${move}]];
+
+			if (move == 2) {
+				scrollerTest()
+			}
+
+
+
+			$("#minus").on("click", function () {
+
+				calculateTotalPriceMinus();
+
+			});
+
+			$("#plus").on("click", function () {
+				console.log($("#count").val());
+				calculateTotalPricePlus();
+			});
+
+
+
+
+			$("[id^='Modify']").on("click", function () {
+				console.log($(this).data("idx"));
+				$("#spanContent" + $(this).data("idx")).toggle();
+				var content = $("#spanContent" + $(this).data("idx")).text();
+
+
+
+				$("#input" + $(this).data("idx")).toggle().val(content);
+
+
+				if ($("#Update" + $(this).data("idx")).is(':visible') == false) {
+					$("#Update" + $(this).data("idx")).show();
+				} else {
+					$("#Update" + $(this).data("idx")).hide();
+				}
+
+
+
+
+			});
+
+
+			$("[id^='Update']").on("click", function () {
+				var itemId = $("#itemId").val();
+
+				var token = $("meta[name='_csrf']").attr("content");
+				var header = $("meta[name='_csrf_header']").attr("content");
+
+				var checkVal = $("#input" + $(this).data("idx")).val();
+				if (checkVal == undefined || checkVal == null || checkVal == "") {
+					console.log($("#input" + $(this).data("idx")).val());
+					alert("댓글을 작성해주세요.");
+					return false;
+				}
+
+				var idx = $(this).data("idx");
+				var content = $("#input" + $(this).data("idx")).val();
+				// location.href = "/comment/update/" + idx + "/" + content;
+
+				var url = "/comment/update"
+
+
+				$.ajax({
+					url: url,
+					type: "POST",
+					data: {
+						idx: idx,
+						content: content
+					},
+					beforeSend: function (xhr) {
+						xhr.setRequestHeader(header, token);
+					},
+					dataType: "text",
+					cache: false,
+					success: function (result, status) {
+					
+						location.href = '/item/' + itemId + '/' + move;
+
+
+
+					},
+					error: function (jqXHR, status, error) {
+						if (jpXHR.status == '401') {
+							alert('로그인 후 이용해주세요');
+							location.href = '/members/login';
+						} else {
+							alert(jqXHR.responseText);
+						}
+					}
+
+				});
+
+			});
+
+
+
+
+
+			// 삭제 버튼 클릭시 삭제됨
+			//  만들꺼 (댓글 삭제 할껀지 알림창 띄워주기)
+			$("[id^='Delete']").on("click", function () {
+
+				var token = $("meta[name='_csrf']").attr("content");
+				var header = $("meta[name='_csrf_header']").attr("content");
+				var idx = $(this).data("idx");
+				var itemId = $("#itemId").val();
+				// location.href = "/comment/delete/" + idx;
+				var move = 2;
+				var url = "/comment/delete";
+
+				// 삭제기능 ajax 로 바꿀꺼임
+
+				$.ajax({
+					url: url,
+					type: "POST",
+					data: {
+						idx: idx
+					},
+					beforeSend: function (xhr) {
+						xhr.setRequestHeader(header, token);
+					},
+					dataType: "text",
+					cache: false,
+					success: function (result, status) {
+						alert("댓글 삭제 성공");
+						location.href = '/item/' + itemId + '/' + move;
+
+
+
+					},
+					error: function (jqXHR, status, error) {
+						if (jpXHR.status == '401') {
+							alert('로그인 후 이용해주세요');
+							location.href = '/members/login';
+						} else {
+							alert(jqXHR.responseText);
+						}
+					}
+
+				});
+
+			});
+
+
+
+
+
+
+		});
+
+
+
+		function page(page) {
+			var itemId = $("#itemId").val();
+			console.log(itemId);
+
+			location.href = "/item/" + itemId + "/" + page;
+			location.href = "#pagination";
+		}
+
+		function scrollerTest() {
+			document.querySelector("#pagination")
+			let location = document.querySelector("#pagination").offsetTop;
+			location2 = location + 2000;
+			console.log(location);
+			window.scrollTo({top: location2, behavior: "smooth"});
+
+		}
+
+
+		function calculateTotalPrice() {
+
+			var count = Number($("#count").val());
+
+			var cc = Number(count);
+			console.log(cc);
+			var price = $("#price").val();
+			console.log(price);
+			var totalPrice = price * count;
+			$("#totalPrice").html('&#8361;'+ totalPrice.toLocaleString());
+		}
+
+
+
+
+		function calculateTotalPriceMinus() {
+
+			var count = Number($("#count").val()) - 1;
+			var cc = Number(count);
+
+			var price = $("#price").val();
+
+			var totalPrice = price * count;
+			$("#totalPrice").html('&#8361;'+ totalPrice.toLocaleString());
+		}
+
+		function calculateTotalPricePlus() {
+
+			var count = Number($("#count").val()) + 1;
+			var cc = Number(count);
+
+			var price = $("#price").val();
+
+			var totalPrice = price * count;
+			$("#totalPrice").html('&#8361;'+ totalPrice.toLocaleString());
+		}
+
+
+
+		function addCart() {
+
+			if($(":radio[name='size']:checked").length<1){
+				alert("size를 선택해주세요");
+				return false;
+			}
+			
+			
+			var token = $("meta[name='_csrf']").attr("content");
+			console.log(token);
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+			var url = "/cart";
+			var paramData = {
+				itemId: $("#itemId").val(),
+				count: $("#count").val(),
+				size: $('input[name="size"]:checked').val()
+
+			};
+			
+			console.log($("#itemId").val());
+
+			var param = JSON.stringify(paramData);
+
+			$.ajax({
+				url: url,
+				type: "POST",
+				contentType: "application/json",
+				data: param,
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				dataType: "json",
+				cache: false,
+				success: function (result, status) {
+					alert("상품을 장바구니에 담았습니다.");
+					location.href = '/cart';
+				},
+				error: function (jqXHR, status) {
+					if (jpXHR.status == '401') {
+						alert('로그인 후 이용해주세요');
+						location.href = '/members/login';
+					} else {
+						alert(jqXHR.responseText);
+					}
+				}
+
+			});
+		}
+
+
+
+
+		function commentInsert() {
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+			var url = "/board/comment/write";
+			var move = 2;
+
+
+
+			var itemId = $("#itemId").val();
+			console.log($("#content").val());
+
+
+			console.log(starScore);
+
+		
+			$.ajax({
+				url: url,
+				type: "POST",
+				// contentType: "application/json",
+				data: {
+					content: $("#content").val(),
+					itemId: $("#itemId").val(),
+					star: starScore
+				},
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				dataType: "text",
+				cache: false,
+				success: function (result, status) {
+					
+					location.href = '/item/' + itemId + '/' + move;
+
+				},
+				error: function (jqXHR, status, error) {
+					if (jqXHR.status == '401') {
+						alert('로그인 후 이용해주세요');
+						location.href = '/members/login';
+					}
+				}
+
+			});
+		}
+
+		function mark(star) {
+			starScore = star;
+
+		}
+
+	</script>
+</th:block>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+	<style>
+		.mgb-15 {
+			margin-bottom: 15px;
+		}
+
+		.mgt-30 {
+			margin-top: 30px;
+		}
+
+		.mgt-50 {
+			margin-top: 50px;
+		}
+
+		.repImgDiv {
+			margin-right: 15px;
+			height: auto;
+			width: 50%;
+		}
+
+		.repImg {
+			width: 100%;
+			height: 400px;
+		}
+
+		.wd50 {
+			height: auto;
+			width: 50%;
+		}
+
+
+
+
+		.star-rating {
+			display: flex;
+			flex-direction: row-reverse;
+			font-size: 2.25rem;
+			line-height: 2.5rem;
+			justify-content: space-around;
+			padding: 0 0.2em;
+
+			width: 5em;
+		}
+
+		.star-rating input {
+			display: none;
+		}
+
+		.star-rating label {
+			-webkit-text-fill-color: transparent;
+			/* Will override color (regardless of order) */
+			-webkit-text-stroke-width: 2.3px;
+			-webkit-text-stroke-color: #2b2a29;
+			cursor: pointer;
+		}
+
+		/* 클릭시 변경 */
+		.star-rating :checked~label {
+			-webkit-text-fill-color: gold;
+		}
+
+		.star-rating label:hover,
+		.star-rating label:hover~label {
+			-webkit-text-fill-color: #fff58c;
+		}
+
+		.content {
+			margin: 0;
+		}
+
+		#pagination {
+			margin-left: 10%;
+			margin-right: 10%;
+		}
+
+
+
+
+		/* 댓글 날짜 위치 */
+
+
+		/* 별 색깔 금색으로 변경 */
+		.fa-star {
+			color: gold;
+		}
+	</style>
+</th:block>
+
+
+<div layout:fragment="content">
+	<form method="post" th:action="@{/order/orderPage1}" id="frmCart" name=formCheck>
+
+		<div th:if="${#authorization.expression('isAuthenticated()')}" style="display: none">
+			<p style="padding: 0px !important; display: none;" th:text="${#authentication.name}"
+				id="authenticationName"></p>
+		</div>
+
+		<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+		<input type="hidden" th:name="itemId" id="itemId" th:value="${item.id}">
+		<div class="bg-light py-3">
+			<div class="container">
+				<div class="row">
+					<div class="col-md-12 mb-0"><a href="index.html">Home</a> <span class="mx-2 mb-0">/</span> <strong
+							class="text-black">Tank Top T-Shirt</strong></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="site-section">
+			<div class="container">
+				<div class="row">
+					<div class="col-md-6">
+						<img th:src="${item.itemImgDtoList[0].imgUrl}" class="img-fluid" th:alt="${item.itemNm}">
+					</div>
+					<div class="col-md-6">
+
+						<h2 class="text-black" th:text="${item.itemNm}">Tank Top T-Shirt</h2>
+						<p class="lead" th:text="${item.itemDetail}"></p>
+						<p class="mb-4">Ex numquam veritatis debitis minima quo error quam eos dolorum quidem
+							perferendis. Quos repellat dignissimos minus, eveniet nam voluptatibus molestias omnis
+							reiciendis perspiciatis illum hic magni iste, velit aperiam quis.</p>
+						<div class="text-primary h4">
+							<input type="hidden" th:value="${item.price}" id="price" name="price">
+							<span th:text="'&#8361;'+${#numbers.formatInteger(item.price,3, 'COMMA')}"></span>
+						</div>
+						<div class="mb-1 d-flex">
+							<label for="option-sm" class="d-flex mr-3 mb-3">
+								<span class="d-inline-block mr-2" style="top:-2px; position: relative;"><input
+										type="radio" id="size" name="size" value="S"></span> <span
+									class="d-inline-block text-black">Small</span>
+							</label>
+							<label for="option-md" class="d-flex mr-3 mb-3">
+								<span class="d-inline-block mr-2" style="top:-2px; position: relative;"><input
+										type="radio" id="size" name="size" value="M"></span> <span
+									class="d-inline-block text-black">Medium</span>
+							</label>
+							<label for="option-lg" class="d-flex mr-3 mb-3">
+								<span class="d-inline-block mr-2" style="top:-2px; position: relative;"><input
+										type="radio" id="size" name="size" value="L"></span> <span
+									class="d-inline-block text-black">Large</span>
+							</label>
+							<label for="option-xl" class="d-flex mr-3 mb-3">
+								<span class="d-inline-block mr-2" style="top:-2px; position: relative;"><input
+										type="radio" id="size" name="size" value="XL"></span> <span
+									class="d-inline-block text-black"> Extra Large</span>
+							</label>
+						</div>
+						<div class="mb-5">
+							<div class="input-group mb-3" style="max-width: 120px;">
+								<div class="input-group-prepend">
+									<button class="btn btn-outline-primary js-btn-minus" type="button"
+										id="minus">&minus;</button>
+								</div>
+								<input type="text" class="form-control text-center" value="1" placeholder=""
+									aria-label="Example text with button addon" aria-describedby="button-addon1"
+									name="count" id="count">
+								<div class="input-group-append">
+									<button class="btn btn-outline-primary js-btn-plus" type="button"
+										id="plus">&plus;</button>
+								</div>
+							</div>
+
+							<div class="text-right mgt-50">
+								<h5> 결제 금액 </h5>
+								<strong class="text-primary h4" name="totalPrice" id="totalPrice"></strong></p>
+
+							</div>
+
+
+
+
+						</div>
+						<div th:if="${item.itemSellStatus == T(com.shop.constant.ItemSellStatus).SELL}"
+							class="text-right">
+							<button type="button" class="buy-now btn btn-sm btn-primary" onclick="addCart()"> 장바구니
+								담기</button>
+							<button type="submit" class="buy-now btn btn-sm btn-primary" id=order> 주문하기
+							</button>
+						</div>
+						<div th:unless="${item.itemSellStatus == T(com.shop.constant.ItemSellStatus).SELL}"
+							class="text-right">
+							<button type="button" class="btn btn-danger btn-lg">품절</button>
+						</div>
+
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+	</form>
+
+
+
+	<!-- <form th:action="@{'/item/${item.id}/' + ${comment.number}}" role="form" method="get" th:object="${comment}">-->
+	<div th:each="itemImg : ${item.itemImgDtoList}" class="text-center">
+		<img th:if="${not #strings.isEmpty(itemImg.imgUrl)}" th:src="${itemImg.imgUrl}" class="rounded mbg-15"
+			width="1000">
+	</div>
+
+
+
+	<div class="site-section block-3 site-blocks-2 bg-light">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-md-7 site-section-heading text-center pt-4">
+					<h2>Featured Products</h2>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-12">
+					<div class="nonloop-block-3 owl-carousel">
+						<th:block th:each="item, status: ${items.getContent()}">
+							<div class="item">
+								<div class="block-4 text-center">
+									<a th:href="'/item/' +${item.id} + '/1'" class="block-4-image">
+									<figure class="block-4-image">
+										
+										<img th:src="${item.imgUrl}" class="img-fluid" th:alt="${item.itemNm}">
+									</figure>
+									<div class="card-body border-left border-right text-center p-0 pt-4 pb-3">
+										<h3 th:text="${item.itemNm}"><a href="#"></a></h3>
+										<p class="mb-0">Finding perfect products</p>
+										<p class="text-primary font-weight-bold" th:text="'&#8361;'+${#numbers.formatInteger(item.price,3, 'COMMA')}"></p>
+
+
+
+									</div>
+									</a>
+								</div>
+							</div>
+
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+<div id="pagination">
+	<div class="site-section block-3 site-blocks-2">
+		
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-md-7 site-section-heading text-center pt-4" style="margin-bottom: 20px;">
+					<h2>Review</h2>
+				</div>
+			</div>
+
+			<div class="row">
+
+				<div class="col-md-12">
+
+
+
+
+					<div th:each="comment : ${comment.getContent()}">
+						<!--			<div class="card my-4">-->
+
+						<div class="media mb-4">
+
+							<!--				<div class="form-group">-->
+
+							<img src="/images/user.png" alt="Image" class="img-fluid mr-3 mt-1" style="width: 45px;">
+							<div class="media-body">
+
+								<h6 th:text="${comment.writer}" id="writer"></h6>
+								<!--					<i th:text=${comment.regTime}></i>-->
+								<!--									<i th:text="${#temporals.format(comment.regTime, 'yyyy-MM-dd hh:mm')}"-->
+								<!--										id="checkDate"></i>-->
+								<!--					<i th:text="${comment.star}" id="checkDate" ></i>-->
+
+
+								<div class="text-primary mb-2">
+									<th:block
+										th:if="${comment.star} == 1 or ${comment.star} == 2 or ${comment.star} == 3 or ${comment.star} == 4 or ${comment.star} == 5">
+										<i class="fas fa-star"></i>
+									</th:block>
+
+									<th:block
+										th:if=" ${comment.star} == 2 or ${comment.star} == 3 or ${comment.star} == 4 or ${comment.star} == 5">
+										<i class="fas fa-star"></i>
+									</th:block>
+
+									<th:block
+										th:if="${comment.star} == 3 or ${comment.star} == 4 or ${comment.star} == 5">
+										<i class="fas fa-star"></i>
+									</th:block>
+
+									<th:block th:if="${comment.star} == 4 or ${comment.star} == 5">
+										<i class="fas fa-star"></i>
+									</th:block>
+
+									<th:block th:if="${comment.star} == 5">
+										<i class="fas fa-star"></i>
+									</th:block>
+
+
+								</div>
+								
+									<p th:text="${comment.content}" th:id="'spanContent' + ${comment.idx}"
+										style="word-break: break-all; position:Relative;"></p>
+
+									<p><input th:id="'input' + ${comment.idx}" style="display:none;"
+											class="form-control"></p>
+
+
+									<i th:text="${#temporals.format(comment.regTime, 'yyyy-MM-dd hh:mm')}"
+										id="checkDate"></i>
+								</div>
+
+								<!--						<div><span th:text="${comment.idx}"></span></div>-->
+
+
+
+
+								<th:block th:if="${#authentication.name == comment.writer}">
+									<div>
+										<button type="button" class="btn btn-outline-primary btn-sm"
+											th:id="'Modify'+ ${comment.idx}" th:data-idx="${comment.idx}"
+											style="margin-top: 10px; margin-right: 5px;">Modify</button>
+									</div>
+									<button type="button" class="btn btn-outline-success btn-sm"
+										th:id="'Update'+ ${comment.idx}" th:data-idx="${comment.idx}"
+										style="display:none; margin-top: 10px; margin-right: 5px;">Update</button>
+									<button type="button" class="btn btn-outline-danger btn-sm"
+										th:id="'Delete'+ ${comment.idx}" th:data-idx="${comment.idx}"
+										style="margin-top: 10px;">Delete</button>
+
+
+
+								</th:block>
+
+
+							</div>
+
+
+
+
+
+						</div>
+
+
+
+
+
+
+						<div
+							th:with="start=${(comment.number/maxPage)*maxPage + 1}, end=(${(comment.totalPages == 0) ? 1 : (start + (maxPage - 1) < comment.totalPages ? start + (maxPage - 1) : comment.totalPages)})">
+
+							<ul class="pagination justify-content-center">
+
+								<li class="page-item" th:classappend="${comment.first}?'disabled'">
+									<a th:onclick="'javascript:page(' + ${comment.number - 1} + ')'"
+										aria-label='Previous' class="page-link" id="target1">
+										<span aria-hidden='true'>Previous</span>
+									</a>
+								</li>
+
+								<li class="page-item" th:each="page: ${#numbers.sequence(start, end)}"
+									th:classappend="${comment.number eq page-1}?'active':''">
+									<a th:onclick="'javascript:page(' + ${page - 1} + ')'" th:inline="text"
+										class="page-link" id="target2">[[${page}]]</a>
+								</li>
+
+								<li class="page-item" th:classappend="${comment.last}?'disabled'">
+									<a th:onclick="'javascript:page(' + ${comment.number + 1} + ')'" aria-label='Next'
+										class="page-link" id="target3">
+										<span aria-hidden='true'>Next</span>
+									</a>
+								</li>
+
+							</ul>
+						</div>
+
+						<div class="card my-4">
+							<!--			<h5 class="card-header">Leave a Comment:</h5>-->
+
+							<div class="card-body">
+								<!-- <form name="comment-form" th:action="@{/board/comment/write}" method="post"> -->
+
+								<div class="text-primary font-weight-bold" style="font-size: 20px;">
+
+									Please leave a rating!!!
+								</div>
+
+
+								<div class="form-group">
+									<textarea name="content" class="form-control" rows="3" id="content"></textarea>
+
+								</div>
+
+								<div class="star-rating" style="margin-left: 10px;margin-bottom: 10px;">
+
+									<input type="radio" id="5-stars" name="rating" value="5" v-model="ratings"
+										onclick="mark(5)" />
+									<label for="5-stars" class="star pr-4">★</label>
+									<input type="radio" id="4-stars" name="rating" value="4" v-model="ratings"
+										onclick="mark(4)" />
+									<label for="4-stars" class="star">★</label>
+									<input type="radio" id="3-stars" name="rating" value="3" v-model="ratings"
+										onclick="mark(3)" />
+									<label for="3-stars" class="star">★</label>
+									<input type="radio" id="2-stars" name="rating" value="2" v-model="ratings"
+										onclick="mark(2)" />
+									<label for="2-stars" class="star">★</label>
+									<input type="radio" id="1-star" name="rating" value="1" v-model="ratings"
+										onclick="mark(1)" />
+									<label for="1-star" class="star">★</label>
+								</div>
+
+
+								<button type="button" class="btn btn-primary" onclick="commentInsert()">Submit</button>
+								<!-- </form> -->
+							</div>
+						</div>
+
+
+					</div>
+
+
+
+				</div>
+
+
+				<!-- Comments Form -->
+
+
+				<!--</form>-->
+
+			</div>
+
+</html>

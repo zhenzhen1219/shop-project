@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorate="~{layouts/layout1}">
+
+<head>
+	<meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
+
+</head>
+
+<!-- 사용자 스크립트 추가 -->
+<th:block layout:fragment="script">
+
+	<script th:inline="javascript">
+		
+		
+
+		$(document).ready(function () {
+			getOrderTotalPrice();
+			
+			$("input[name=cartChkBox]").change(function () {
+				getOrderTotalPrice();
+
+			});
+
+			$('#orderBtn').on("click", function (e) {
+				e.preventDefault();
+
+				orders();
+			});
+
+		});
+
+
+
+
+
+		function getOrderTotalPrice() {
+			
+			var orderTotalPrice = 0;
+			$("input[name=cartChkBox]:checked").each(function () {
+				
+				var cartItemId = $(this).val();
+				console.log(cartItemId);
+				var price = $("#price_" + cartItemId).attr("data-price");
+				console.log(price);
+				var count = $("#count_" + cartItemId).val();
+				console.log(count);
+
+				orderTotalPrice += price * count;
+
+				return orderTotalPrice;
+
+			});
+
+			if (orderTotalPrice >= 50000) {
+				$("#deliveryfee").html("무료배송");
+				$("#orderTotalPrice").html('&#8361;'+ orderTotalPrice.toLocaleString());
+			} else {
+				$("#deliveryfee").html("3,000");
+				$("#orderTotalPrice").html('&#8361;'+ (orderTotalPrice + 3000).toLocaleString());
+				
+			}
+
+
+
+
+		}
+
+
+		function checkAll() {
+			if ($("#checkall").prop("checked")) {
+				$("input[name=cartChkBox]").prop("checked", true);
+			} else {
+				$("input[name=cartChkBox]").prop("checked", false);
+			}
+			getOrderTotalPrice();
+		}
+
+		function updateCartItemCount(cartItemId, count) {
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+			var url = "/cartItem/" + cartItemId + "?count=" + count;
+
+			$.ajax({
+				url: url,
+				type: "PATCH",
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				dataType: "json",
+				cache: false,
+				success: function (result, status) {
+					console.log("cartItem count update success");
+				},
+				error: function (jqXHR, status, error) {
+
+					if (jqXHR.status == '401') {
+						alert('로그인 후 이용해주세요.');
+						location.href = '/members/login';
+					} else {
+						alert(jqXHR.responseText);
+					}
+				}
+			});
+		}
+
+		function changeCount(obj) {
+			
+			var count = obj.value;
+			
+			var cartItemId = obj.id.split('_')[1];
+			var price = $("#price_" + cartItemId).attr("data-price");
+			
+			var totalPrice = count * price;
+			$("#totalPrice_" + cartItemId).html('&#8361;'+ totalPrice);
+			getOrderTotalPrice();
+			updateCartItemCount(cartItemId, count);
+		}
+
+
+
+
+
+		function deleteCartItem(obj) {
+			var cartItemId = obj.dataset.id;
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+			var url = "/cartItem/" + cartItemId;
+
+			$.ajax({
+				url: url,
+				type: "DELETE",
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				dataType: "json",
+				cache: false,
+				success: function (result, status) {
+					location.href = '/cart';
+				},
+				error: function (jqXHR, status, error) {
+					if (jqXHR.status == '401') {
+						alert('로그인 후 이용해주세요');
+						location.href = '/members/login';
+					} else {
+						alert(jqXHR.responseJSON.message);
+					}
+				}
+
+			});
+
+		}
+
+
+
+
+
+		///////////////////////////////////////////////////
+		function orders() {
+
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+			var url = "/cart/orderPageTest";
+
+			var dataList = new Array();
+
+
+			$("input[name=cartChkBox]:checked").each(function () {
+				var cartItemId = $(this).val();
+				var data = new Object();
+				data["cartItemId"] = cartItemId;
+				dataList.push(data);
+
+			});
+			console.log("1111111111");
+			console.log(dataList);
+
+			console.log("22222222222");
+			console.log(JSON.stringify(dataList));
+
+
+			//paramData['cartOrderDtoList'] = dataList;
+
+			// console.log("!!!!!!!!!! - " + dataList);
+
+			//var param = JSON.stringify(paramData);
+
+			//console.log(param);
+			var isSuccess = true;
+			// var dataListTest = {cartItemid : 15};
+			// console.log(dataListTest);
+
+			$.ajax({
+				url: url,
+				type: "POST",
+				dataType: "text",
+				data: JSON.stringify(dataList),
+				contentType: "application/json; charset=UTF-8",
+
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				//dataType: "json",
+				cache: false,
+				success: function (result) {
+					alert("주문페이지로 이동합니다.");
+					location.href = '/cart/orderPageTest';
+
+
+				},
+				error: function (jqXHR, status, error) {
+					if (jqXHR.status == '401') {
+						alert('로그인 후 이용해주세요');
+						location.href = '/members/login';
+
+					} else {
+						alert(jqXHR.message);
+
+					}
+				}
+
+			});
+
+
+
+
+		}
+
+
+
+
+
+
+	</script>
+
+</th:block>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+	<style>
+		.content-mg {
+			margin-left: 25%;
+			margin-right: 25%;
+			margin-top: 2%;
+			margin-bottom: 100px;
+		}
+
+		.repImgDiv {
+			margin-right: 15px;
+			margin-left: 15px;
+			height: auto;
+		}
+
+		.repImg {
+			height: 100px;
+			width: 100px;
+		}
+
+		.fs18 {
+			font-size: 18px;
+		}
+
+		.fs24 {
+			font-size: 24px;
+		}
+
+		.content {
+			margin: 0;
+		}
+
+		.site-blocks-table {
+			overflow-x: hidden;
+			
+		}
+	</style>
+</th:block>
+
+<div layout:fragment="content">
+	<div class="bg-light py-3">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12 mb-0"><a href="index.html">Home</a> <span class="mx-2 mb-0">/</span> <strong
+						class="text-black">Cart</strong></div>
+			</div>
+		</div>
+	</div>
+
+	<div>
+
+
+		<div class="site-section">
+			<div class="container">
+				<div class="row mb-5">
+					<form class="col-md-12" method="post">
+						<div class="site-blocks-table">
+							<table class="table table-bordered">
+								<thead>
+									<tr>
+										<th class="product-name"><input type="checkbox" id="checkall"
+												onclick="checkAll()"> Select All</th>
+										<th class="product-thumbnail">Image</th>
+										<th class="product-name">Product</th>
+										<th class="product-price">Price</th>
+										<th class="product-quantity">Quantity</th>
+										<th class="product-total">Total</th>
+										<th class="product-remove">Remove</th>
+									</tr>
+								</thead>
+
+								<tbody>
+
+									<tr th:each="cartItem : ${cartItems}">
+										<td class="product-thumbnail">
+											<input type="checkbox" name="cartChkBox" th:value="${cartItem.cartItemId}" checked>
+
+										</td>
+										<td class="product-thumbnail">
+
+
+											<img th:src="${cartItem.imgUrl}" class="img-fluid"
+												th:alt="${cartItem.itemNm}">
+
+										</td>
+
+										<td class="product-name">
+
+											<h2 class="h5 text-black" th:text="${cartItem.itemNm}"></h2>
+											<h2 class="h5 text-black" th:text="${cartItem.size}"></h2>
+
+										</td>
+										<td th:id="'price_' + ${cartItem.cartItemId}" th:data-price="${cartItem.price}"
+											th:text="'&#8361;'+${#numbers.formatInteger(cartItem.price,3, 'COMMA')}" class="align-self-center mr-2">
+											
+										</td>
+
+										<td>
+
+											<div class="input-group mb-3" style="max-width: 120px;">
+
+												<input type="number" name="count"
+													th:id="'count_' + ${cartItem.cartItemId}"
+													th:value="${cartItem.count}" min="1"
+													class="form-control text-center" onchange="changeCount(this)">
+
+											</div>
+
+										</td>
+
+										<td>
+											<span th:id="'totalPrice_' + ${cartItem.cartItemId}" name="totalPrice"
+											th:text="'&#8361;'+${#numbers.formatInteger((cartItem.price * cartItem.count),3, 'COMMA')}">
+<!-- 												th:text="'&#8361;'+ ${cartItem.price * cartItem.count}"> -->
+<!-- 												"'&#8361;'+${#numbers.formatInteger(item.price,3, 'COMMA')}" -->
+											</span>
+
+										</td>
+
+										<td>
+
+											<a href="#" class="btn btn-primary btn-sm" onclick="deleteCartItem(this)"
+												th:data-id="${cartItem.cartItemId}">X</a>
+
+										</td>
+						</div>
+				</div>
+				</td>
+
+				</tr>
+				</tbody>
+				</table>
+
+				<div class="row">
+					<div class="col-md-6">
+						<div class="row mb-5">
+							<div class="col-md-6 mb-3 mb-md-0">
+
+								<!--								<button type="button" class="btn btn-primary btn-sm btn-block" id="orderBtn">Order</button>-->
+							</div>
+						
+						</div>
+						<div class="row">
+							<div class="col-md-12">
+								<label class="text-black h4" for="coupon">Coupon</label>
+								<p>Enter your coupon code if you have one.</p>
+							</div>
+							<div class="col-md-8 mb-3 mb-md-0">
+								<input type="text" class="form-control py-3" id="coupon" placeholder="Coupon Code">
+							</div>
+							<div class="col-md-4">
+								<button class="btn btn-primary btn-sm">Apply Coupon</button>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6 pl-5">
+						<div class="row justify-content-end">
+							<div class="col-md-7">
+								<div class="row">
+									<div class="col-md-12 text-right border-bottom mb-5">
+										<h3 class="text-black h4 text-uppercase">Cart Totals</h3>
+									</div>
+								</div>
+
+
+								<div class="row mb-5">
+									<div class="col-md-6">
+										<span class="text-black">Deliveryfee</span>
+									</div>
+									<div class="col-md-6 text-right">
+										<!--										<strong class="text-black">$230.00</strong>-->
+										<span id="deliveryfee" class="text-black" name="deliveryfee">0원</span>
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<span class="text-black">Total</span>
+									</div>
+									<div class="col-md-6 text-right">
+										<strong class="text-black" name="orderTotalPrice" id="orderTotalPrice"></strong>
+									</div>
+								</div>
+
+
+								<div class="row">
+									<div class="col-md-12">
+										<button type="button" class="btn btn-primary btn-lg py-3 btn-block"
+											id="orderBtn">Proceed To Checkout</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+</html>

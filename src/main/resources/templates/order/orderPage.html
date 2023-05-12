@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+   layout:decorate="~{layouts/layout1}">
+
+<head>
+   <meta name="_csrf" th:content="${_csrf.token}" />
+   <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+
+</head>
+
+<!-- 사용자 스크립트 추가 -->
+<th:block layout:fragment="script">
+
+   <script th:inline="javascript">
+      var test3 = 0
+
+      $(document).ready(function () {
+
+         getOrderTotalPrice();
+
+         $('#orderBtn').on("click", function () {
+
+            
+            
+            var d_name = $("#userName").val();
+            var d_address = $("#address").val();
+            var d_address2 = $("#address2").val();   // 상세 주소 값 비어있을시 상세 주소를 작성해주세요 문구 띄우게하기. 
+            var d_phone = $("#phone").val();
+            var d_memo = $("#memo").val();
+
+            if ($('#userName').val() == '') {
+               $("#nameError").html("이름을 작성해주세요.");
+               return false;
+            } else if ($("#address").val() == "") {
+               $("#addressError").html("주소를 작성해주세요.");
+               return false;
+            } else if ($("#address2").val() == "") {
+               $("#addressError").html("상세 주소를 작성해주세요.");
+               return false;
+            } else if ($("#phone").val() == "") {
+               $("#phoneError").html("번호를 작성해주세요.");
+               return false;
+            } else if ($("#memo").val() == "") {
+               $("#memoError").html("배송메시지를 작성해주세요.");
+               return false;
+            }
+            
+            
+            
+			var length = $('#orderTotalPrice').text().length;
+			console.log("왜 길이 안나오냐"+length);
+            var test2 = $('#orderTotalPrice').text().replace(",", "").substr(1,length);
+            console.log("이거금액확인"+test2);
+            test3 = test2
+
+
+
+            iamport();
+            // 테스트용
+            // orders();
+
+         });
+
+
+
+
+      });
+
+
+      function iamport() {
+
+         //가맹점 식별코드
+         IMP.init('imp65015536');
+         IMP.request_pay({
+            pg: 'html5_inicis',
+            pay_method: 'card', // 지불방법
+            merchant_uid: 'merchant_' + new Date().getTime(),
+            name: $('#itemNm').text(), //결제창에서 보여질 이름
+            amount: test3, //실제 결제되는 가격
+         }, function (rsp) {
+            console.log(rsp);
+            // 결제검증
+
+            if (rsp.success) {
+               uid = rsp.imp_uid;
+
+               var msg = '결제가 완료되었습니다.';
+               msg += '고유ID : ' + rsp.imp_uid;
+               msg += '상점 거래ID : ' + rsp.merchant_uid;
+               msg += '결제 금액 : ' + rsp.paid_amount;
+               msg += '카드 승인번호 : ' + rsp.apply_num;
+               orders();
+
+            } else {
+               var msg = '결제에 실패하였습니다.';
+               msg += '에러내용 : ' + rsp.error_msg;
+            }
+            alert(msg);
+         });
+      }
+
+      // 결제완료 후 장바구니 아이템 삭제
+      function deleteCartItem() {
+         $("input[name=cartChkBox]:checked").each(function () {
+            var cartItemId = $(this).val();
+            var token = $("meta[name='_csrf']").attr("content");
+            var header = $("meta[name='_csrf_header']").attr("content");
+
+            var url = "/cartItem/" + cartItemId;
+
+            $.ajax({
+               url: url,
+               type: "DELETE",
+               beforeSend: function (xhr) {
+                  xhr.setRequestHeader(header, token);
+               },
+               dataType: "json",
+               cache: false,
+               success: function (result, status) {
+                  alert("장바구니 삭제성공");
+               },
+               error: function (jqXHR, status, error) {
+                  if (jqXHR.status == '401') {
+                     alert('로그인 후 이용해주세요');
+                     location.href = '/members/login';
+                  } else {
+                     alert(jqXHR.responseJSON.message);
+                  }
+               }
+
+            });
+         });
+
+      }
+
+
+
+      // 주소 api
+      function kakaopost() {
+         new daum.Postcode({
+            oncomplete: function (data) {
+               document.querySelector("#zipcode").value = data.zonecode;
+               document.querySelector("#address").value = data.address
+            }
+         }).open();
+      }
+
+
+
+
+      function getOrderTotalPrice() {
+         var orderTotalPrice = 0;
+         $("input[name=cartChkBox]:checked").each(function () {
+            var cartItemId = $(this).val();
+            var price = $("#price_" + cartItemId).attr("data-price");
+            console.log(price);
+            var count = $("#count_" + cartItemId).text();
+            console.log(count);
+
+            orderTotalPrice += price * count;
+            console.log(getOrderTotalPrice);
+
+
+
+         });
+
+
+         if (orderTotalPrice >= 50000) {
+				$("#deliveryfee").html("무료배송");
+				$("#orderTotalPrice").html('&#8361;'+ orderTotalPrice.toLocaleString());
+			} else {
+				$("#deliveryfee").html("3,000");
+				$("#orderTotalPrice").html('&#8361;'+ (orderTotalPrice + 3000).toLocaleString());
+				
+			}
+
+
+
+      }
+
+//       function changeCount(obj) {
+//          var count = obj.value;
+//          var cartItemId = obj.id.split('_')[1];
+//          var price = $("#price_" + cartItemId).data("price");
+//          var totalPrice = count * price;
+//          $("#totalPrice_" + cartItemId).html(totalPrice.);
+
+//          getOrderTotalPrice();
+//       }
+
+
+      function updateCartItemCount(cartItemId, count) {
+         var token = $("meta[name='_csrf']").attr("content");
+         var header = $("meta[name='_csrf_header']").attr("content");
+
+         var url = "/cartItem/" + cartItemId + "?count=" + count;
+
+         $.ajax({
+            url: url,
+            type: "PATCH",
+            beforeSend: function (xhr) {
+               xhr.setRequestHeader(header, token);
+            },
+            dataType: "json",
+            cache: false,
+            success: function (result, status) {
+               console.log("cartItem count update success");
+            },
+            error: function (jqXHR, status, error) {
+
+               if (jqXHR.status == '401') {
+                  alert('로그인 후 이용해주세요.');
+                  location.href = '/members/login';
+               } else {
+                  alert(jqXHR.responseText);
+               }
+            }
+         });
+      }
+
+//       function changeCount(obj) {
+//          var count = obj.value;
+//          var cartItemId = obj.id.split('_')[1];
+//          var price = $("#price_" + cartItemId).attr("data-price");
+//          var totalPrice = count * price;
+//          $("#totalPrice_" + cartItemId).html(totalPrice + "원");
+//          getOrderTotalPrice();
+//          updateCartItemCount(cartItemId, count);
+//       }
+
+
+
+      function orders() {
+
+         var token = $("meta[name='_csrf']").attr("content");
+         var header = $("meta[name='_csrf_header']").attr("content");
+
+         var url = "/cart/orders";
+
+         var dataList = new Array();
+         var paramData = new Object();
+
+         var size = $("size").text();
+
+         var d_name = $("#userName").val();
+         var d_address = $("#address").val() + ' ' + $("#address2").val();    // 상세 주소 값이 한번에 같이 들어가게 추가
+         var d_phone = $("#phone").val();
+         var d_memo = $("#memo").val();
+
+
+         $("input[name=cartChkBox]:checked").each(function () {
+            var cartItemId = $(this).val();
+            var data = new Object();
+            data["cartItemId"] = cartItemId;
+            data["size"] = size;
+            data["d_name"] = d_name;
+            data["d_address"] = d_address;
+            data["d_phone"] = d_phone;
+            data["d_memo"] = d_memo;
+            
+
+            dataList.push(data);
+
+
+
+         });
+
+
+
+         // data["d_name"] = d_name;
+         //data["d_address"] = d_address;
+         //data["d_phone"] = d_phone;
+         //data["d_memo"] = d_memo;
+
+         paramData['cartOrderDtoList'] = dataList;
+
+         console.log("!!!!!!!!!! - " + dataList);
+
+         var param = JSON.stringify(paramData);
+
+         console.log(param);
+
+         $.ajax({
+            url: url,
+            type: "POST",
+            contentType: "application/json",
+            data: param,
+            beforeSend: function (xhr) {
+               /* 데이터를 전송하기 전에 헤더에 csrf값을 설정 */
+               xhr.setRequestHeader(header, token);
+            },
+            dataType: "json",
+            cache: false,
+            success: function (result, status) {
+               alert("주문이 완료 되었습니다.");
+               location.href = '/orders';
+            },
+            error: function (jqXHR, status, error) {
+
+               if (jqXHR.status == '401') {
+                  alert('로그인 후 이용해주세요');
+                  location.href = '/members/login';
+               } else {
+                  alert(jqXHR.responseJSON.message);
+
+               }
+
+            }
+         });
+      }
+
+   </script>
+
+</th:block>
+
+<!-- 사용자 CSS 추가 -->
+<th:block layout:fragment="css">
+   <style>
+      .content-mg {
+         margin-left: 25%;
+         margin-right: 25%;
+         margin-top: 2%;
+         margin-bottom: 100px;
+      }
+
+      .repImgDiv {
+         margin-right: 15px;
+         margin-left: 15px;
+         height: auto;
+      }
+
+      .repImg {
+         height: 100px;
+         width: 100px;
+      }
+
+      .fs18 {
+         font-size: 18px;
+      }
+
+      .fs24 {
+         font-size: 24px;
+      }
+
+
+      .content {
+         margin: 0;
+      }
+
+      .site-blocks-table {
+         overflow-x: hidden;
+         overflow-y: auto;
+      }
+   </style>
+</th:block>
+
+<div layout:fragment="content">
+   <div class="bg-light py-3">
+      <div class="container">
+         <div class="row">
+            <div class="col-md-12 mb-0"><a href="/">Home</a> 
+            <span class="mx-2 mb-0">/</span> <a href="/cart">Cart</a> 
+            <span class="mx-2 mb-0">/</span> <strong class="text-black">Order Page</strong></div>
+         </div>
+      </div>
+   </div>
+   <div>
+
+
+
+      <div class="site-section">
+         <div class="container">
+            <div class="row mb-5"  style="justify-content: center;">
+               <form class="col-md-12" method="post">
+                  <div class="site-blocks-table">
+                     <table class="table table-bordered">
+                        <thead>
+                           <tr>
+                              <th class="product-name" style="display: none;"><input type="checkbox"
+                                    id="checkall" onclick="checkAll()"> Select All</th>
+                              <th class="product-thumbnail">Image</th>
+                              <th class="product-name">Product/Size</th>
+                              <th class="product-price">Price</th>
+                              <th class="product-quantity">Quantity</th>
+                              <th class="product-total">Total</th>
+                           </tr>
+                        </thead>
+
+                        <tbody>
+
+                           <tr th:each="cartItem : ${cartItems}">
+                              <td class="product-thumbnail" style="display: none;">
+                                 <input type="checkbox" name="cartChkBox" th:value="${cartItem.cartItemId}"
+                                    disabled checked>
+
+                              </td>
+                              <td class="product-thumbnail">
+
+
+                                 <img th:src="${cartItem.imgUrl}" class="rounded repImg"
+                                    th:alt="${cartItem.itemNm}">
+
+                              </td>
+
+                              <td class="product-name">
+
+                                 <h2 class="h5 text-black" th:text="${cartItem.itemNm}" id="itemNm"></h2>
+                                 <h2 class="h5 text-black" th:text="${cartItem.size}" id="size"></h2>
+                                 
+
+
+                              </td>
+                              <td th:id="'price_' + ${cartItem.cartItemId}" th:data-price="${cartItem.price}"
+                                 th:text="'&#8361;'+${#numbers.formatInteger(cartItem.price,3, 'COMMA')}" class="align-self-center mr-2">
+                              </td>
+
+                              <td th:id="'count_' + ${cartItem.cartItemId}" th:text="${cartItem.count}">
+
+                              </td>
+
+                              <td>
+                                 <span th:id="'totalPrice_' + ${cartItem.cartItemId}" name="totalPrice"
+                                    th:text="'&#8361;'+${#numbers.formatInteger((cartItem.price * cartItem.count),3, 'COMMA')}">
+                                 </span>
+
+                              </td>
+
+
+                  </div>
+            </div>
+            </td>
+
+            </tr>
+            </tbody>
+            </table>
+
+            <!--
+            <div class="col-md-12 text-right border-bottom mb-5">
+               <h3 class="text-black h4 text-uppercase" style="font-size: 30px;">Cart Totals</h3>
+            </div>
+             -->
+       
+             
+
+            <div class="row mb-5" >
+                <table class="table site-block-order-table mb-5">
+                    <thead>
+                     <th>List</th>
+                      <th>Price</th>
+                    </thead>
+                    <tbody>
+
+                      <tr>
+                        <td class="text-black font-weight-bold"><strong>deliveryfee</strong></td>
+                        <td id="deliveryfee" class="text-black" name="deliveryfee"></td>
+                      </tr>
+                      <tr>
+                        <td class="text-black font-weight-bold"><strong>orderTotalPrice</strong></td>
+                        <td class="text-black font-weight-bold" name="orderTotalPrice" id="orderTotalPrice" style="font-size: 20px;"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  
+                 <!--
+               <div class="col-md-6">
+                  <span class="text-black">Deliveryfee</span>
+               </div>
+               <div class="col-md-6 text-right">
+                  
+                  <span id="deliveryfee" class="text-black" name="deliveryfee">0원</span>
+               </div>
+            </div>
+            -->
+             <!--
+
+            <div class="row mb-3">
+               <div class="col-md-6">
+                  <span class="text-black" style="font-size: 30px;">Total</span>
+               </div>
+               <div class="col-md-6 text-right">
+                  <strong class="text-danger" name="orderTotalPrice" id="orderTotalPrice" style="font-size: 30px;"></strong>
+               </div>
+            </div>
+   -->
+               </div>
+
+
+            <div class="col-md-12 text-left border-bottom mb-5" style="margin-top: 10px;">
+               <h3 class="text-black h4 text-uppercase" style="font-size: 30px;">Billing Details</h3>
+            </div>
+
+            <form action="/order/com" method="post" id="frm">
+
+
+               <div class="form-group row">
+                  <div class="col-md-2">
+                     <span class="text-black">Name</span>
+
+                  </div>
+                  <div class="col-md-10 text-left">
+                     <input type="text" class="form-control" id="userName">
+                     <p><span id="nameError" name="nameError"> </span></p>
+                  </div>
+               </div>
+
+
+
+
+               <div class="form-group row">
+                  <div class="col-md-2">
+                     <span class="text-black">Address</span>
+
+                  </div>
+                  <!--                  <div class="col-sm-10">-->
+                  <!--                     <div class="col-sm-8">-->
+                  <div class="col-md-10 text-left">
+                     <input type="text" name="zipcode" id="zipcode" size="7" onclick="kakaopost()" readonly
+                        style="display: none;">
+                     <input type="button" value="우편번호찾기" onclick="kakaopost()" style="display: none;">
+                     <input type="text" name="address" id="address" size="70" onclick="kakaopost()"
+                        class="form-control" placeholder="클릭시 주소 찾기창 팝업">
+                     <input type="text" name="address2" id="address2" size="70" 
+                        class="form-control" placeholder="상세 주소 입력">
+                     <p><span id="addressError" name="nameError"> </span></p>
+
+                  </div>
+                  
+                  
+                  <!--                  <div class="col-md-10 text-right">-->
+                  <!--                     <input type="text" name="address" id="address" size="70" onclick="kakaopost()"-->
+                  <!--                        class="form-control">-->
+                  <!--                     <p><span id="addressError" name="nameError"> </span></p>-->
+                  <!--                  </div>-->
+               </div>
+
+
+         
+
+
+
+         <div class="form-group row">
+            <div class="col-md-2">
+               <span class="text-black">Phone</span>
+
+            </div>
+            <div class="col-md-10 text-left">
+               <input type="text" class="form-control" id="phone">
+               <p><span id="phoneError" name="nameError"> </span></p>
+            </div>
+         </div>
+
+
+         <div class="form-group row">
+            <div class="col-md">
+               <span class="text-black">Order Notes</span>
+
+            </div>
+            <div class="col-md-10 text-left">
+               <input type="text" class="form-control" id="memo">
+               <p><span id="memoError" name="nameError"> </span></p>
+            </div>
+         </div>
+
+
+         </form>
+
+
+         <div class="row" style="justify-content: center;">
+            <div class="col-md-2">
+               <button type="button" class="btn btn-primary btn-lg btn-block" id="orderBtn">Order</button>
+            </div>
+         </div>
+
+         
+      </div>
+   </div>
+
+</html>

@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+
+<html xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+	xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	layout:decorate="~{layouts/layout1}">
+
+<div th:fragment="header" class="site-navbar" role="banner">
+
+
+	<script th:inline="javascript">
+		$(document).ready(function() {
+
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+
+// 			setInterval(function() {
+			var userId = [[${#authentication.name}]]
+			console.log(userId);
+			
+			if(userId != "anonymousUser") {
+			$.ajax({
+				url : "/cartCount",
+				type : "POST",
+				cache : false,
+				beforeSend : function(xhr) {
+					xhr.setRequestHeader(header, token);
+				},
+				success : function(data) { // getserver.php 파일에서 echo 결과값이 data 임
+					$('#cartCount').html(data);
+
+					console.log(data);
+				},
+				error : function(jqXHR, status, error) {
+
+					if (jqXHR.status == '401') {
+						//alert('로그인 후 이용해주세요.');
+						location.href = '/members/login';
+						
+					} else {
+						alert(jqXHR.responseText);
+					}
+				}
+
+			});
+			
+			}
+			
+// 	 		}, 10000);
+
+		});
+	</script>
+	
+
+	<div class="site-wrap">
+
+		<div class="top_notice">
+			<div class="inwrap">
+				<MARQUEE class="top_notice_t" scrollamount="10">Free
+					delivery for purchases over &#8361; 50,000</MARQUEE>
+			</div>
+		</div>
+		<div class="site-navbar-top">
+			<div class="container">
+				<div class="row align-items-center">
+					<div
+						class="col-6 col-md-4 order-2 order-md-1 site-search-icon text-left">
+						<form th:action="@{/item/items}" method="get"
+							class="site-block-top-search">
+							<span class="icon icon-search2"></span> <input name="searchQuery"
+								type="search" class="form-control border-0" placeholder="Search">
+						</form>
+					</div>
+
+					<div
+						class="col-12 mb-3 mb-md-0 col-md-4 order-1 order-md-2 text-center">
+						<div class="site-logo">
+							<a href="/" class="js-logo-clone" style="text-decoration: none;">Attirance</a>
+						</div>
+					</div>
+
+					<div class="col-6 col-md-4 order-3 order-md-3 text-right">
+						<div class="site-top-icons">
+							<ul>
+								<!--세션-->
+								<div th:if="${#authorization.expression('isAuthenticated()')}">
+									<p style="padding: 0px !important"
+										th:text="'안녕하세요, ' + ${#authentication.name} + '님 (' + ${#authorization.expression('hasRole(''ROLE_USER'')') ? '일반 사용자' : '관리자'} + ')'"
+										class="nav-link"></p>
+
+								</div>
+
+								<li><a href="/orders"><span class="icon icon-person"></span></a></li>
+								<li><a href="/cart" class="site-cart"> <span 
+										class="icon icon-shopping_cart"></span> <span class="count" sec:authorize="isAuthenticated()"><span
+											id="cartCount"></span></span>
+
+								</a></li>
+								<li class="d-inline-block d-md-none ml-md-0"><a href="#"
+									class="site-menu-toggle js-menu-toggle"> <span
+										class="icon-menu"></span></a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<nav class="site-navigation text-right text-md-center"
+			role="navigation">
+			<div class="container">
+				<ul class="site-menu js-clone-nav d-none d-md-block"
+					style="padding: 0;">
+					<li><a href="/item/items">Shop</a></li>
+					<li class="has-children"><a href="/orders">My Page</a>
+						<ul class="dropdown">
+							<li><a href="/orders"> Buy </a></li>
+							<li><a href="/cart">Cart</a></li>
+							<!-- 본인의 회원 정보 수정 밎 삭제 -->
+							<li sec:authorize="isAuthenticated()"><a
+								href="/members/passCheckForm">Modify</a></li>
+						</ul></li>
+
+
+					<li class="nav-item"><a href="/board/boardList"> Notice </a></li>
+					<li class="has-children"
+						th:if="${#authorization.expression('hasRole(''ROLE_ADMIN'')')}">
+						<a href="/admin/item/new"
+						sec:authorize="hasAnyAuthority('ROLE_ADMIN')">Admin</a>
+
+						<ul class="dropdown">
+							<li class="nav-item"><a href="/admin/item/new">
+									PlusProduct </a></li>
+							<li class="nav-item"><a href="/admin/items"> Update
+									Product </a></li>
+							<!--				 회원 관리 페이지로 이동 -> 오직 관리자만 가능-->
+							<li class="nav-item"><a class="nav-link"
+								href="/members/members">Member Management</a></li>
+						</ul>
+					</li>
+					<li class="nav-item" sec:authorize="isAnonymous()"><a
+						href="/members/login"> login </a></li>
+					<li class="nav-item" sec:authorize="isAuthenticated()"><a
+						href="/members/logout"> logout</a></li>
+				</ul>
+			</div>
+		</nav>
+	</div>
+</div>
+
+</html>
